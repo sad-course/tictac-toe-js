@@ -1,8 +1,12 @@
-const { createServer } = require("http");
-const { Server } = require("socket.io");
+import { createServer } from "http";
+import { Server } from "socket.io";
 
 const httpServer = createServer();
-const io = new Server(httpServer);
+const io = new Server(httpServer, {
+    cors: {
+        origin: "*", // Allow all origins for development; adjust for production
+    }
+});
 
 io.on("connection", (socket) => {
     console.log("A user connected");
@@ -11,18 +15,19 @@ io.on("connection", (socket) => {
         console.log("A user disconnected");
     });
 
-    socket.on("message", (msg) => {
-        console.log("Message received:", msg);
-        // Echo the message back to the client
-        socket.emit("message", `Server received: ${msg}`);
-    });
-
-    socket.on("room", (room) => {
+    socket.on("join-room", (room) => {
         console.log(`User joined room: ${room}`);
         socket.join(room);
-        // Notify the user that they have joined the room
-        socket.emit("roomJoined", `You have joined room: ${room}`);
+        io.to(room).emit("notification", `A new user has joined room: ${room}`);
     })
+
+    socket.on("send-message", ({ room, messageValue }) => {
+        console.log(`Message to room ${room}: ${messageValue}`);
+        // Broadcast the message to the specified room
+        io.to(room).emit("receive-message", messageValue);
+    });
 });
 
-httpServer.listen(3000);
+httpServer.listen(8080, () => {
+    console.log("Server is listening on port 8080");
+});
